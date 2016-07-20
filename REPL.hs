@@ -11,7 +11,7 @@ main = do greet
           repl stdin mempty
 
 greet :: IO ()
-greet = putStrLn "Morpheus REPL environment"
+greet = putStrLn "Morpheus REPL environment\n:? for help"
 
 quit :: IO ()
 quit = putStrLn "Goodbye."
@@ -23,7 +23,7 @@ showHelp = putStr help
                          , "- Commands"
                          , " :?  - Show this help page"
                          , " :q  - quit the Morpheus REPL"
-                         , " :clear  - reset to an empty environment (clear the stack)"
+                         , " :clear  - reset to an empty environment (clear stack and bindings)"
                          , ""
                          ]
 

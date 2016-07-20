@@ -8,7 +8,6 @@ Core for Morpheus language.
 {-# LANGUAGE GADTs, KindSignatures #-}
 
 module Core where
-import Control.Monad (mzero)
 
 import State
 
