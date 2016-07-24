@@ -31,6 +31,7 @@ data Expr :: * where
      MVoid :: Expr
      MName :: Name -> Expr
 
+-- Show instance so we can print the stack
 instance Show Expr where
     show (MInt n) = show n
     show (MString s) = show s
@@ -118,5 +119,6 @@ runIdentifier nm = do Just value <- lookupBinding nm
 run :: Prgm -> (Expr, MState)
 run = flip runEnv mempty
 
+-- run starting from a given environment (state)
 runEnv :: Prgm -> MState -> (Expr, MState)
 runEnv p = runState (foldl (>>) (return MVoid) $ map step p)
