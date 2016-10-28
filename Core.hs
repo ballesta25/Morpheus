@@ -30,6 +30,7 @@ data Expr :: * where
      MString :: String -> Expr
      MVoid :: Expr
      MName :: Name -> Expr
+     MQuotExp :: Prgm -> Bindings -> Expr
 
 -- Show instance so we can print the stack
 instance Show Expr where
@@ -45,8 +46,10 @@ type Stack = [Expr]
 showStack :: Stack -> String
 showStack = unwords . map show . reverse
 
+-- Frame: bindings at a given scope 
 -- may want to replace later (Data.Map maybe?)
-type Bindings = [(Name, Expr)]
+type Frame = [(Name, Expr)]
+data Bindings = Local Frame Bindings | Global Bindings
 
 insert :: Name -> Expr -> Bindings -> Bindings
 insert name value = ((name, value):)
@@ -65,7 +68,7 @@ action :: MState -> IO ()
 action (MState a _ _) = a
 
 bindings :: MState -> Bindings
-bindings (MState _ _ b) = b
+bindings (MState _ b _) = b
 
 setAction :: MState -> IO() -> MState
 setAction st a = MState a (stack st) (bindings st)
