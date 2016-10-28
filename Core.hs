@@ -9,6 +9,7 @@ Core for Morpheus language.
 
 module Core where
 
+import Control.Applicative ((<|>))
 import State
 
 data Primative = (:+) | (:-) | Print | Bind
@@ -49,17 +50,32 @@ showStack = unwords . map show . reverse
 -- Frame: bindings at a given scope 
 -- may want to replace later (Data.Map maybe?)
 type Frame = [(Name, Expr)]
-data Bindings = Local Frame Bindings | Global Bindings
+data Bindings = Local Frame Bindings | Global Frame
+
+-- todo: add the rest of the builtins here
+prelude = Global []
+
+readBinding :: Name -> Bindings -> Maybe Expr
+readBinding n (Global f)  = lookup n f
+readBinding n (Local f b) = lookup n f <|> readBinding n b
 
 insert :: Name -> Expr -> Bindings -> Bindings
-insert name value = ((name, value):)
+insert name value (Global f)  = Global $ (name, value):f
+insert name value (Local f b) = Local ((name, value):f) b
 
 data MState :: * where
      MState :: IO () -> Stack -> Bindings -> MState
 
 instance Monoid MState where
-    mempty = MState (return ()) [] []
+    mempty = MState (return ()) [] prelude
     (MState a0 s0 b0) `mappend` (MState a1 s1 b1) = MState (a0 >> a1) (s1 ++ s0) (b0 `mappend` b1)
+
+-- needed to write MState mappend (maybe get rid of MState Monoid instance
+--    instead?) this part doesn't make a whole lot of sense.
+instance Monoid Bindings where
+  mempty = prelude
+  l `mappend` (Global f) = Local f l
+  l `mappend` (Local f b) = Local f $ l `mappend` b
 
 stack :: MState -> Stack
 stack (MState _ s _) = s
@@ -68,7 +84,7 @@ action :: MState -> IO ()
 action (MState a _ _) = a
 
 bindings :: MState -> Bindings
-bindings (MState _ b _) = b
+bindings (MState _ _ b) = b
 
 setAction :: MState -> IO() -> MState
 setAction st a = MState a (stack st) (bindings st)
@@ -80,7 +96,7 @@ addBinding :: Name -> Expr -> State MState Expr
 addBinding name value = State $ \s -> (value, MState (action s) (stack s) (insert name value (bindings s)))
 
 lookupBinding :: Name -> State MState (Maybe Expr)
-lookupBinding nm = State $ \s -> (lookup nm (bindings s), s)
+lookupBinding nm = State $ \s -> (readBinding nm (bindings s), s)
 
 push :: Expr -> State MState Expr
 push e = State $ \s -> (e, MState (action s) (e:stack s) (bindings s))
