@@ -1,0 +1,19 @@
+Implementation:
+support for [ ] brackets for (quoted ?) program fragments
+	may need to add a tokenize step before parse
+
+treat morphemes correctly
+	need to parse them as distinct from identifiers
+	need to be able to store / look up bindings correctly
+	     separate datatype for words and morphemes (currently conflated via Name type)
+
+deal more gracefully with inconsistent types on evaluation
+     currently pattern-match failure in Core
+     can deal with via `fail` in state monad?
+
+
+Design:
+determine correct computaional model under morphemes
+	  ?reversible?
+
+ 
