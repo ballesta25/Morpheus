@@ -12,7 +12,7 @@ module Core where
 import Control.Applicative ((<|>))
 import State
 
-data Primative = (:+) | (:-) | Print | Bind
+data Primative = (:+) | (:-) | Print | Bind | Exec
                deriving Show
 
 data Symbol :: * where
@@ -31,7 +31,7 @@ data Expr :: * where
      MString :: String -> Expr
      MVoid :: Expr
      MName :: Name -> Expr
-     MQuotExp :: Prgm -> Bindings -> Expr
+     MQuotExpr :: Prgm -> Bindings -> Expr
 
 -- Show instance so we can print the stack
 instance Show Expr where
@@ -39,6 +39,7 @@ instance Show Expr where
     show (MString s) = show s
     show MVoid = "()"
     show (MName nm) = '\'':nm
+    show (MQuotExpr p _) = show p -- result here is ugly
 
 type Name = String
 
@@ -86,6 +87,9 @@ action (MState a _ _) = a
 bindings :: MState -> Bindings
 bindings (MState _ _ b) = b
 
+setBindings :: MState -> Bindings -> MState
+setBindings st b = MState (action st) (stack st) b
+
 setAction :: MState -> IO() -> MState
 setAction st a = MState a (stack st) (bindings st)
 
@@ -111,7 +115,11 @@ step (IntLit n) = push (MInt n)
 step (StrLit s) = push (MString s)
 step (PrimOp o) = stepPrim o
 step (QuotID s) = push (MName s)
-step (Identifier s) = runIdentifier s
+step (Identifier s)   = runIdentifier s
+step (Quotation prgm) = State $ \s -> let
+    outerScope = bindings s
+    innerScope = Local [] outerScope
+  in runState (push $ MQuotExpr prgm innerScope) s
 
 stepPrim :: Primative -> State MState Expr
 stepPrim (:+) = do MInt x <- pop
@@ -129,6 +137,10 @@ stepPrim Bind = do MName nm <- pop
                    expr <- pop
                    addBinding nm expr
                    return expr
+stepPrim Exec = do MQuotExpr quot binds <- pop
+                   State $ \(MState a s b) -> let (res, st) = runEnv quot (MState a s binds)
+                                                  in (res, setBindings st b)
+                   
 
 -- this will need to become more sophisticated to deal with morphemes
 runIdentifier :: Name -> State MState Expr

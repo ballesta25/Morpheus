@@ -67,6 +67,7 @@ parseTypes = [ fmap IntLit . readMaybe
                        , ("-",(:-))
                        , ("print", Print)
                        , ("bind", Bind)
+                       , ("exec", Exec)
                        ]
 
 

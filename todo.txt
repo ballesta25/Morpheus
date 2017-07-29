@@ -1,6 +1,9 @@
 Implementation:
 support for [ ] brackets for (quoted ?) program fragments
 	may need to add a tokenize step before parse
+	- done
+
+conditional branching (also need a Boolean datatype)
 
 treat morphemes correctly
 	need to parse them as distinct from identifiers
