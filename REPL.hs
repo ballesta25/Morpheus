@@ -24,6 +24,7 @@ showHelp = putStr help
                          , " :?  - Show this help page"
                          , " :q  - quit the Morpheus REPL"
                          , " :clear  - reset to an empty environment (clear stack and bindings)"
+                         , " :l <filename> - load file"
                          , ""
                          ]
 
@@ -49,6 +50,22 @@ replCmd "q" _ _ = quit
 replCmd "?"        hdl s = showHelp >> repl hdl s
 replCmd "clear"    hdl _ = repl hdl mempty
 replCmd "bindings" hdl s = putStrLn (show $ bindings s) >> repl hdl s
+replCmd ('l':' ':file) hdl s = (openFile file ReadMode) >>= flip runNonInteractive s >>= repl hdl
+
+runNonInteractive :: Handle -> MState -> IO MState
+runNonInteractive hdl s = do
+  eof <- hIsEOF hdl
+  if eof
+    then
+    do putStrLn "File loaded." >> return s
+    else
+    do input <- hGetLine hdl
+       run $ parse input
+         where run (Left err) = putStrLn ("Error in file " ++ show hdl ++ ":\n" ++ unlines err) >> return s
+               run (Right prgm) = let (ret, newState) = runEnv prgm s
+                                  in do exec newState
+                                        runNonInteractive hdl $ setAction newState (return ())
+         
 
 exec :: MState -> IO ()
 exec = action
