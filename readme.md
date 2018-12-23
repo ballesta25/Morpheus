@@ -3,7 +3,7 @@
 The intention with this is to create a programming language that deals natively with derivational morphemes.
 
 
-As an example of what that means, consider the `exec` family of Linux syscalls: it's clear to a human what `execvpe` does from the definitions of `exec`, `execp`, `execv` and `exece`, but the function needs a separate definition so that the compiler can tell.  With derivational morphemes, you would be able to define what the suffix `-p` does and then the meaning of `execvp` could be automatically derived from the meaning of `execv`.
+As an example of what that means, consider the `exec` family of Linux syscalls: it's clear to a human what `execvpe` does from the definitions of `exec`, `execp`, `execv`, and `exece`, but the function needs a separate definition so that the compiler can tell.  With derivational morphemes, you would be able to define what the suffix `-p` does and then the meaning of `execvp` could be automatically derived from the meaning of `execv`.
 
 
 The language is stack-based, and until I implement more, is essentially a glorified RPN calculator.

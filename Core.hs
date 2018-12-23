@@ -51,7 +51,7 @@ showStack = unwords . map show . reverse
 -- Frame: bindings at a given scope 
 -- may want to replace later (Data.Map maybe?)
 type Frame = [(Name, Expr)]
-data Bindings = Local Frame Bindings | Global Frame
+data Bindings = Local Frame Bindings | Global Frame deriving Show
 
 -- todo: add the rest of the builtins here
 prelude = Global []

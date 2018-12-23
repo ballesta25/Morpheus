@@ -46,8 +46,9 @@ repl hdl s = do putStr prompt
 
 replCmd :: String -> Handle -> MState -> IO ()
 replCmd "q" _ _ = quit
-replCmd "?" hdl s = showHelp >> repl hdl s
-replCmd "clear" hdl _ = repl hdl mempty
+replCmd "?"        hdl s = showHelp >> repl hdl s
+replCmd "clear"    hdl _ = repl hdl mempty
+replCmd "bindings" hdl s = putStrLn (show $ bindings s) >> repl hdl s
 
 exec :: MState -> IO ()
 exec = action
