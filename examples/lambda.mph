@@ -1,0 +1,10 @@
+[ 'y bind exec ] 'T bind
+[ 'y bind 'x bind y exec ] 'F bind
+[ 'F bind 'T bind 'C bind T F C exec ] 'if bind
+
+[ 'x bind [ x ] ] 'q bind
+
+F 'Z bind
+[ 'n bind [ 'z bind 'f bind f z n f exec exec ] ] 'S bind
+
+[ 'n bind [ exec 1 + q exec ] [ 0 ] n exec ] 'unChurch bind
