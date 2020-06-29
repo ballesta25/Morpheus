@@ -67,16 +67,22 @@ insert name value (Local f b) = Local ((name, value):f) b
 data MState :: * where
      MState :: IO () -> Stack -> Bindings -> MState
 
+instance Semigroup MState where
+    (MState a0 s0 b0) <> (MState a1 s1 b1) = MState (a0 >> a1) (s1 ++ s0) (b0 <> b1)  
+
 instance Monoid MState where
     mempty = MState (return ()) [] prelude
-    (MState a0 s0 b0) `mappend` (MState a1 s1 b1) = MState (a0 >> a1) (s1 ++ s0) (b0 `mappend` b1)
+
 
 -- needed to write MState mappend (maybe get rid of MState Monoid instance
 --    instead?) this part doesn't make a whole lot of sense.
+instance Semigroup Bindings where
+  l <> (Local f b) = Local f $ l <> b
+  l <> (Global f) = Local f l
 instance Monoid Bindings where
   mempty = prelude
-  l `mappend` (Global f) = Local f l
-  l `mappend` (Local f b) = Local f $ l `mappend` b
+
+  
 
 stack :: MState -> Stack
 stack (MState _ s _) = s
@@ -139,7 +145,7 @@ stepPrim Bind = do MName nm <- pop
                    return expr
 stepPrim Exec = do MQuotExpr quot binds <- pop
                    State $ \(MState a s b) -> let (res, st) = runEnv quot (MState a s binds)
-                                                  in (res, setBindings st b)
+                                              in (res, setBindings st b)
                    
 
 -- this will need to become more sophisticated to deal with morphemes
