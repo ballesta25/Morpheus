@@ -118,7 +118,7 @@ pop = State $ \s -> let l = stack s
 
 -- error handling
 instance MonadFail (State MState) where
-  fail = error
+  fail err = State $ \(MState a s b) -> (error "attempted to use error value", MState (a >> putStrLn ("Morpheus runtime error: " ++ err)) s b)
 
 
 step :: Symbol -> State MState Expr
