@@ -5,11 +5,12 @@ Andrei Elliott
 Core for Morpheus language.
 -}
 
-{-# LANGUAGE GADTs, KindSignatures #-}
+{-# LANGUAGE GADTs, KindSignatures, FlexibleInstances #-}
 
 module Core where
 
 import Control.Applicative ((<|>))
+import Control.Monad.Fail
 import State
 
 data Primative = (:+) | (:-) | Print | Bind | Exec
@@ -114,6 +115,10 @@ push e = State $ \s -> (e, MState (action s) (e:stack s) (bindings s))
 pop :: State MState Expr
 pop = State $ \s -> let l = stack s
                     in (head l, MState (action s) (tail l) (bindings s))
+
+-- error handling
+instance MonadFail (State MState) where
+  fail = error
 
 
 step :: Symbol -> State MState Expr
