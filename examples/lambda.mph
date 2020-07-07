@@ -4,7 +4,7 @@
 
 [ 'x bind [ x ] ] 'q bind
 
-F 'Z bind
-[ 'n bind [ 'z bind 'f bind f z n f exec exec ] ] 'S bind
+[ 'z bind 'f bind z exec ] 'Z bind
+[ 'n bind [ 'z bind 'f bind f z n exec f exec ] ] 'S bind
 
-[ 'n bind [ exec 1 + q exec ] [ 0 ] n exec ] 'unChurch bind
+[ 'n bind [ 1 + ] [ 0 ] n exec ] 'unChurch bind
