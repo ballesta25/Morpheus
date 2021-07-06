@@ -81,10 +81,16 @@ readQuotName s = case s of
                    _         -> Nothing
 
 readIdentifier :: String -> Maybe Name
-readIdentifier s = if all isAlphaNum s  -- TODO: fix to allow morpheme decomposition
-                   then Just s
-                   else Nothing
+readIdentifier s = case span isAlphaNum s of -- TODO: fix to allow morpheme decomposition
+                     ("", _) -> Nothing
+                     (root, rest) -> fmap (\ms -> Name root ms) $ readMorphemes rest
 
+readMorphemes :: String -> Maybe [Morpheme]
+readMorphemes "" = Just []
+readMorphemes (c:s)|cat == DashPunctuation || cat `elem` [OtherPunctuation .. OtherSymbol] = fmap ((c:m) :) $ readMorphemes rest
+                   |otherwise = Nothing
+                    where cat = generalCategory c
+                          (m, rest) = span isAlphaNum s
 
 -- add more: maybe infinite possibilities like Lua nested comments
 data Paren :: * where

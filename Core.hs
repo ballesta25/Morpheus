@@ -39,10 +39,19 @@ instance Show Expr where
     show (MInt n) = show n
     show (MString s) = show s
     show MVoid = "()"
-    show (MName nm) = '\'':nm
+    show (MName nm) = '\'': show nm
     show (MQuotExpr p _) = show p -- result here is ugly
 
-type Name = String
+data Name = Name Root [Morpheme]
+
+root (Name r _) = r
+morphemes (Name _ ms) = ms
+
+instance Show Name where
+  show n = concat $ (root n):(morphemes n)
+
+type Root = String
+type Morpheme = String
 
 type Stack = [Expr]
 
@@ -51,25 +60,30 @@ showStack = unwords . map show . reverse
 
 -- Frame: bindings at a given scope 
 -- may want to replace later (Data.Map maybe?)
-type Frame = [(Name, Expr)]
+type Frame = [(Root, FrameEntry)]
+-- For now, store the original expression from the definition
+-- along with the morphemes that were attached to the root
+-- This way, we don't need to compute an expression corresponding to
+-- for the root unless it is used on its own
+type FrameEntry = (Expr, [Morpheme])
 data Bindings = Local Frame Bindings | Global Frame deriving Show
 
 -- todo: add the rest of the builtins here
 prelude = Global []
 
-readBinding :: Name -> Bindings -> Maybe Expr
-readBinding n (Global f)  = lookup n f
-readBinding n (Local f b) = lookup n f <|> readBinding n b
+readBinding :: Root -> Bindings -> Maybe FrameEntry
+readBinding r (Global f)  = lookup r f
+readBinding r (Local f b) = lookup r f <|> readBinding r b
 
 insert :: Name -> Expr -> Bindings -> Bindings
-insert name value (Global f)  = Global $ (name, value):f
-insert name value (Local f b) = Local ((name, value):f) b
+insert name value (Global f)  = Global $ (root name, (value, morphemes name)):f
+insert name value (Local f b) = Local ((root name, (value, morphemes name)):f) b
 
 data MState :: * where
      MState :: IO () -> Stack -> Bindings -> MState
 
 instance Semigroup MState where
-    (MState a0 s0 b0) <> (MState a1 s1 b1) = MState (a0 >> a1) (s1 ++ s0) (b0 <> b1)  
+    (MState a0 s0 b0) <> (MState a1 s1 b1) = MState (a0 >> a1) (s1 ++ s0) (b0 <> b1)
 
 instance Monoid MState where
     mempty = MState (return ()) [] prelude
@@ -106,8 +120,8 @@ appendAction act = State $ \(MState a s b) -> (MVoid, MState (a >> act) s b)
 addBinding :: Name -> Expr -> State MState Expr
 addBinding name value = State $ \s -> (value, MState (action s) (stack s) (insert name value (bindings s)))
 
-lookupBinding :: Name -> State MState (Maybe Expr)
-lookupBinding nm = State $ \s -> (readBinding nm (bindings s), s)
+lookupBinding :: Root -> State MState (Maybe FrameEntry)
+lookupBinding rt = State $ \s -> (readBinding rt (bindings s), s)
 
 push :: Expr -> State MState Expr
 push e = State $ \s -> (e, MState (action s) (e:stack s) (bindings s))
@@ -151,12 +165,17 @@ stepPrim Bind = do MName nm <- pop
 stepPrim Exec = do MQuotExpr quot binds <- pop
                    State $ \(MState a s b) -> let (res, st) = runEnv quot (MState a s binds)
                                               in (res, setBindings st b)
-                   
 
--- this will need to become more sophisticated to deal with morphemes
+-- the morpheme list `oldM` applied to a semantic root, r, gives Expr `e`
+-- compute `newM` applied to r
+-- TODO : Implement
+morphology :: Expr -> [Morpheme] -> [Morpheme] -> State MState Expr
+morphology e oldM newM = return e
+
 runIdentifier :: Name -> State MState Expr
-runIdentifier nm = do Just value <- lookupBinding nm
-                      push value
+runIdentifier nm = do Just (e, oldMorphs) <- lookupBinding (root nm)
+                      e' <- morphology e oldMorphs (morphemes nm)
+                      push e'
 
 run :: Prgm -> (Expr, MState)
 run = flip runEnv mempty
