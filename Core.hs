@@ -183,10 +183,10 @@ morphology :: [Morpheme] -> [Morpheme] -> Expr -> State MState Expr
 morphology (o:oldM) (n:newM) e
   |o == n = morphology oldM newM e -- same morpheme on both; cancel
   |otherwise = if length oldM > length newM
-               then runMorphInv o e >>= morphology oldM (n:newM) 
+               then morphology oldM (n:newM) e >>= runMorphInv o
                else runMorph n e >>= morphology (o:oldM) newM
 morphology [] [] e = return e
-morphology (o:oldM) [] e = runMorphInv o e >>= morphology oldM []
+morphology (o:oldM) [] e = morphology oldM [] e >>= runMorphInv o
 morphology [] (n:newM) e =  runMorph n e >>= morphology [] newM
 
 
