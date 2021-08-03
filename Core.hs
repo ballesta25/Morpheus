@@ -163,12 +163,19 @@ stepPrim Bind = do MName nm <- pop
                    addBinding nm expr
                    return expr
 stepPrim Exec = do MQuotExpr quot binds <- pop
-                   State $ \(MState a s b) -> let (res, st) = runEnv quot (MState a s binds)
-                                              in (res, setBindings st b)
+                   stepCall quot binds
+
+-- perform a 'call' operation, running the given quotation in the given
+-- lexical environment
+stepCall quot env = State $
+  \(MState a s b) -> let (res, st) = runEnv quot (MState a s env)
+                     in (res, setBindings st b)
 
 -- apply the changes specifed by the given morpheme
 -- TODO : implement
 runMorph :: Morpheme -> Expr -> State MState Expr
+runMorph "." e = stepPrim Exec {-do let MQuotExpr quot env = e
+                    stepCall quot env-}
 runMorph m e = return e
 
 -- apply the inverse of the given morpheme
@@ -178,22 +185,19 @@ runMorphInv m e = return e
 
 -- the morpheme list `oldM` applied to a semantic root, r, gives Expr `e`
 -- compute `newM` applied to r
--- TODO : Check the cancellation algebra; what do it do, and is that coherent?
 morphology :: [Morpheme] -> [Morpheme] -> Expr -> State MState Expr
 morphology (o:oldM) (n:newM) e
   |o == n = morphology oldM newM e -- same morpheme on both; cancel
-  |otherwise = if length oldM > length newM
-               then morphology oldM (n:newM) e >>= runMorphInv o
-               else runMorph n e >>= morphology (o:oldM) newM
-morphology [] [] e = return e
-morphology (o:oldM) [] e = morphology oldM [] e >>= runMorphInv o
-morphology [] (n:newM) e =  runMorph n e >>= morphology [] newM
+morphology oldM newM e = morphUndo oldM  e >>= morphRedo newM
 
+morphUndo (o:oldM) e = morphology oldM [] e >>= runMorphInv o
+morphUndo [] e = push e
+morphRedo (n:newM) e =  runMorph n e >>= morphology [] newM
+morphRedo [] e = return e
 
 runIdentifier :: Name -> State MState Expr
 runIdentifier nm = do Just (e, oldMorphs) <- lookupBinding (root nm)
-                      e' <- morphology oldMorphs (morphemes nm) e
-                      push e'
+                      morphology oldMorphs (morphemes nm) e
 
 run :: Prgm -> (Expr, MState)
 run = flip runEnv mempty
