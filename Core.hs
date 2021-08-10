@@ -190,9 +190,9 @@ morphology (o:oldM) (n:newM) e
   |o == n = morphology oldM newM e -- same morpheme on both; cancel
 morphology oldM newM e = morphUndo oldM  e >>= morphRedo newM
 
-morphUndo (o:oldM) e = morphology oldM [] e >>= runMorphInv o
+morphUndo (o:oldM) e = morphUndo oldM e >>= runMorphInv o
 morphUndo [] e = push e
-morphRedo (n:newM) e =  runMorph n e >>= morphology [] newM
+morphRedo (n:newM) e =  runMorph n e >>= morphRedo newM
 morphRedo [] e = return e
 
 runIdentifier :: Name -> State MState Expr
