@@ -91,13 +91,19 @@ instance Monoid MState where
 
 -- needed to write MState mappend (maybe get rid of MState Monoid instance
 --    instead?) this part doesn't make a whole lot of sense.
+-- it also doesn't obey the laws - mempty <> mempty \= mempty, although they should be
+--    observationally equivalent
+-- TODO: check whether this can deshadow prelude bindings
 instance Semigroup Bindings where
   l <> (Local f b) = Local f $ l <> b
   l <> (Global f) = Local f l
 instance Monoid Bindings where
   mempty = prelude
 
-  
+-- combine `outer` and `inner` bindings.  Subsequent name references will check `inner` first
+mergeBinds :: Bindings -> Bindings -> Bindings
+mergeBinds outer (Local inner b') = Local inner $ mergeBinds outer b'
+mergeBinds outer (Global inner)   = Local inner outer
 
 stack :: MState -> Stack
 stack (MState _ s _) = s
@@ -141,11 +147,7 @@ step (StrLit s) = push (MString s)
 step (PrimOp o) = stepPrim o
 step (QuotID s) = push (MName s)
 step (Identifier s)   = runIdentifier s
-step (Quotation prgm) = State $ \s -> let
-    outerScope = bindings s
-    innerScope = Local [] outerScope
-  in runState (push $ MQuotExpr prgm innerScope) s
-
+step (Quotation prgm) = stepQuot prgm (Global [])
 stepPrim :: Primative -> State MState Expr
 stepPrim (:+) = do MInt x <- pop
                    MInt y <- pop
@@ -171,16 +173,27 @@ stepCall quot env = State $
   \(MState a s b) -> let (res, st) = runEnv quot (MState a s env)
                      in (res, setBindings st b)
 
+-- create a closure with given program and initial local bindings
+stepQuot prgm binds = State $ \s -> let
+    outerScope = bindings s
+    innerScope = mergeBinds outerScope binds
+  in runState (push $ MQuotExpr prgm innerScope) s
+
+
 -- apply the changes specifed by the given morpheme
 -- TODO : implement
 runMorph :: Morpheme -> Expr -> State MState Expr
-runMorph "." e = stepPrim Exec {-do let MQuotExpr quot env = e
-                    stepCall quot env-}
+runMorph "." e = stepPrim Exec
 runMorph m e = return e
 
 -- apply the inverse of the given morpheme
 -- TODO : implement
 runMorphInv :: Morpheme -> Expr -> State MState Expr
+  -- quote by pushing a quotation consisting of only a dummy variable '_ 
+  -- that looks up into the Expr we were given
+runMorphInv "." e = let dummyName = Name "_" []
+                        binds = insert dummyName e (Global [])
+                    in  stepQuot [Identifier dummyName] binds
 runMorphInv m e = return e
 
 -- the morpheme list `oldM` applied to a semantic root, r, gives Expr `e`
