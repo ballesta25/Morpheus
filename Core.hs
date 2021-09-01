@@ -197,7 +197,7 @@ runMorphInv "." e = let dummyName = (Name "_" [])
                           , (PrimOp Bind)
                           , Quotation [Identifier dummyName]
                           ]
-                    in  step quotPrgm
+                    in  step quotPrgm >> stepPrim Exec
 runMorphInv m e = return e
 
 -- the morpheme list `oldM` applied to a semantic root, r, gives Expr `e`
