@@ -189,11 +189,15 @@ runMorph m e = return e
 -- apply the inverse of the given morpheme
 -- TODO : implement
 runMorphInv :: Morpheme -> Expr -> State MState Expr
-  -- quote by pushing a quotation consisting of only a dummy variable '_ 
-  -- that looks up into the Expr we were given
-runMorphInv "." e = let dummyName = Name "_" []
-                        binds = insert dummyName e (Global [])
-                    in  stepQuot [Identifier dummyName] binds
+  -- quote by pushing a quotation that binds to a dummy variable '_
+  -- then generates a quotation with only that variable
+runMorphInv "." e = let dummyName = (Name "_" [])
+                        quotPrgm = Quotation
+                          [ QuotID dummyName
+                          , (PrimOp Bind)
+                          , Quotation [Identifier dummyName]
+                          ]
+                    in  step quotPrgm
 runMorphInv m e = return e
 
 -- the morpheme list `oldM` applied to a semantic root, r, gives Expr `e`
