@@ -33,6 +33,7 @@ data Expr :: * where
      MVoid :: Expr
      MName :: Name -> Expr
      MQuotExpr :: Prgm -> Bindings -> Expr
+     MErrVal :: String -> Expr
 
 -- Show instance so we can print the stack
 instance Show Expr where
@@ -41,7 +42,8 @@ instance Show Expr where
     show MVoid = "()"
     show (MName nm) = '\'': show nm
     show (MQuotExpr p _) = show p -- result here is ugly
-
+    show (MErrVal s) = "_|_ : " ++ s
+    
 data Name = Name Root [Morpheme]
 
 root (Name r _) = r
@@ -136,9 +138,14 @@ pop :: State MState Expr
 pop = State $ \s -> let l = stack s
                     in (head l, MState (action s) (tail l) (bindings s))
 
+popInt :: State MState (Maybe Integer)
+popInt = State $ \s -> case stack s of
+                         (MInt x : t) -> (Just x, MState (action s) t (bindings s))
+                         _            -> (Nothing, s)
+
 -- error handling
 instance MonadFail (State MState) where
-  fail err = State $ \(MState a s b) -> (error "attempted to use error value", MState (a >> putStrLn ("Morpheus runtime error: " ++ err)) s b)
+  fail err = State $ \(MState a s b) -> (error "attempted to use error value", (MState (a >> putStrLn ("Morpheus runtime error: " ++ err)) (MErrVal err: s)) b)
 
 
 step :: Symbol -> State MState Expr
